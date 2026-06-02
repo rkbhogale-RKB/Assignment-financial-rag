@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+
+.env
+
+uploads/
+
+.venv/
+venv/
+
+chroma_db/
