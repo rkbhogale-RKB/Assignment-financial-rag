@@ -10,6 +10,8 @@ from models import Document
 from database import engine, Base, get_db
 from models import User, UserCreate
 from auth import hash_password
+from models import SearchQuery 
+from rag import search_documents 
 
 
 Base.metadata.create_all(bind=engine)
@@ -115,7 +117,7 @@ def index_document(document_id: int, db: Session = Depends(get_db)):
     db_doc = db.query(Document).filter(Document.id == document_id).first()
     
     if not db_doc:
-        raise HTTPException(status_code=404, detail="Document not found in database")
+        raise HTTPException(status_code=404, detail="Document not found")
 
   
     file_path = f"uploads/{db_doc.filename}"
@@ -123,9 +125,29 @@ def index_document(document_id: int, db: Session = Depends(get_db)):
     try:
         num_chunks = process_and_store_document(file_path, document_id)
         return {
-            "message": "Success! Document read and saved to Vector AI DB.",
+            "message": "Success! Document saved to Vector DB.",
             "chunks_created": num_chunks
         }
     except Exception as e:
         print("Error processing PDF for AI:", e)
-        raise HTTPException(status_code=500, detail="Failed to process document for AI")
+        raise HTTPException(status_code=500, detail="Failed to process document")
+    
+
+
+@app.post("/rag/search")
+def search_financial_documents(
+    search: SearchQuery, 
+    current_user_email: str = Depends(get_current_user)
+):
+    try:
+       
+        relevant_chunks = search_documents(search.query)
+        
+        return {
+            "search_query": search.query,
+            "results_found": len(relevant_chunks),
+            "top_results": relevant_chunks
+        }
+    except Exception as e:
+        print("Error during search:", e)
+        raise HTTPException(status_code=500, detail="Failed to search the documents")

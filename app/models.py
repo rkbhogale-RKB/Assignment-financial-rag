@@ -31,3 +31,6 @@ class Document(Base):
     id = Column(Integer, primary_key=True, index=True)
     filename = Column(String)
     uploaded_by = Column(String)
+
+class SearchQuery(BaseModel):
+    query: str

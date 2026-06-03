@@ -27,3 +27,17 @@ def process_and_store_document(file_path: str, document_id: int):
     vector_store.add_documents(chunks)
     
     return len(chunks) 
+
+def search_documents(query: str, top_k: int = 20):
+    
+    results = vector_store.similarity_search(query, k=top_k)
+    
+    
+    formatted_results = []
+    for doc in results:
+        formatted_results.append({
+            "content": doc.page_content,
+            "document_id": doc.metadata.get("document_id", "Unknown")
+        })
+        
+    return formatted_results
