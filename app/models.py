@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String
 from pydantic import BaseModel
 from database import Base
 
-# --- DATABASE MODELS (SQLAlchemy) ---
+
 
 class User(Base):
     __tablename__ = "users"
@@ -13,7 +13,7 @@ class User(Base):
     hashed_password = Column(String)
 
 
-# --- REQUEST SCHEMAS (Pydantic) ---
+
 
 class UserCreate(BaseModel):
     username: str
@@ -23,3 +23,11 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email: str
     password: str
+
+
+class Document(Base):
+    __tablename__ = "documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    filename = Column(String)
+    uploaded_by = Column(String)

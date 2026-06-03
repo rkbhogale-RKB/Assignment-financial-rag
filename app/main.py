@@ -1,14 +1,17 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-
+from fastapi.security import OAuth2PasswordRequestForm
 from models import UserLogin 
 from auth import verify_password, create_access_token 
-
+import os
+from fastapi import File, UploadFile
+from auth import get_current_user
+from models import Document
 from database import engine, Base, get_db
 from models import User, UserCreate
 from auth import hash_password
 
-# create tables in the database when the app starts
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -23,13 +26,13 @@ def root():
 @app.post("/auth/register")
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
     
-    # check if user already exists first
+    
     existing_user = db.query(User).filter(User.email == user.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
         
     try:
-        # hash the password before saving it to db
+        
         db_user = User(
             username=user.username,
             email=user.email,
@@ -49,18 +52,79 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
 
 
+
+
 @app.post("/auth/login")
-def login_user(user: UserLogin, db: Session = Depends(get_db)):
+def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     
-    # 1. Look up the user by their email
-    db_user = db.query(User).filter(User.email == user.email).first()
     
-    # 2. Check if the user exists AND if the password matches the hashed one in the db
-    if not db_user or not verify_password(user.password, db_user.hashed_password):
+    db_user = db.query(User).filter(User.email == form_data.username).first()
+    
+
+    if not db_user or not verify_password(form_data.password, db_user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
         
-    # 3. If they pass, create a token with their email inside it
+  
     access_token = create_access_token(data={"sub": db_user.email})
     
-    # 4. Give the token to the user
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+if not os.path.exists("uploads"):
+    os.makedirs("uploads")
+
+@app.post("/documents/upload")
+def upload_document(
+    file: UploadFile = File(...), 
+    db: Session = Depends(get_db),
+    current_user_email: str = Depends(get_current_user) 
+    
+    
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+
+   
+    file_path = f"uploads/{file.filename}"
+    with open(file_path, "wb") as buffer:
+        buffer.write(file.file.read())
+
+  
+    db_doc = Document(
+        filename=file.filename,
+        uploaded_by=current_user_email
+    )
+    db.add(db_doc)
+    db.commit()
+    db.refresh(db_doc)
+
+    return {
+        "message": "File uploaded successfully!", 
+        "document_id": db_doc.id,
+        "filename": file.filename
+    }
+
+
+from models import Document
+from rag import process_and_store_document 
+
+@app.post("/rag/index-document/{document_id}")
+def index_document(document_id: int, db: Session = Depends(get_db)):
+    
+    
+    db_doc = db.query(Document).filter(Document.id == document_id).first()
+    
+    if not db_doc:
+        raise HTTPException(status_code=404, detail="Document not found in database")
+
+  
+    file_path = f"uploads/{db_doc.filename}"
+
+    try:
+        num_chunks = process_and_store_document(file_path, document_id)
+        return {
+            "message": "Success! Document read and saved to Vector AI DB.",
+            "chunks_created": num_chunks
+        }
+    except Exception as e:
+        print("Error processing PDF for AI:", e)
+        raise HTTPException(status_code=500, detail="Failed to process document for AI")
