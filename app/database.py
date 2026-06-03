@@ -1,12 +1,13 @@
+import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# setting up the database connection
 engine = create_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(
@@ -16,3 +17,11 @@ SessionLocal = sessionmaker(
 )
 
 Base = declarative_base()
+
+# dependency to get the db session for our routes
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
