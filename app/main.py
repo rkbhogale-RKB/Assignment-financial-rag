@@ -32,7 +32,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
         
     try:
-        
+        # hash the password before saving it to db
         db_user = User(
             username=user.username,
             email=user.email,
@@ -60,7 +60,7 @@ def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = D
     
     db_user = db.query(User).filter(User.email == form_data.username).first()
     
-
+  
     if not db_user or not verify_password(form_data.password, db_user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
         
@@ -78,6 +78,7 @@ def upload_document(
     file: UploadFile = File(...), 
     db: Session = Depends(get_db),
     current_user_email: str = Depends(get_current_user) 
+):
     
     
     if not file.filename.endswith(".pdf"):
@@ -88,7 +89,7 @@ def upload_document(
     with open(file_path, "wb") as buffer:
         buffer.write(file.file.read())
 
-  
+    # 3. Save the record in the database
     db_doc = Document(
         filename=file.filename,
         uploaded_by=current_user_email
