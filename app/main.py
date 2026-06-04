@@ -31,10 +31,9 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     
     existing_user = db.query(User).filter(User.email == user.email).first()
     if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Email already present")
         
     try:
-        # hash the password before saving it to db
         db_user = User(
             username=user.username,
             email=user.email,
@@ -45,15 +44,12 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(db_user)
 
-        return {"message": "User registered successfully"}
+        return {"message": "User added successfully"}
         
     except Exception as e:
         db.rollback()
         print("Error saving user:", e) # print error to console for debugging
         raise HTTPException(status_code=500, detail="Internal Server Error")
-
-
-
 
 
 @app.post("/auth/login")
