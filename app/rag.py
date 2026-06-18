@@ -41,3 +41,30 @@ def search_documents(query: str, top_k: int = 20):
         })
         
     return formatted_results
+
+
+
+def remove_document_embeddings(document_id: int):
+
+    try:
+
+        result = vector_store.get(
+            where={"document_id": document_id}
+        )
+
+        print("Vector Search Result:", result)
+
+        ids_to_delete = result.get("ids", [])
+
+        # No chunks found
+        if not ids_to_delete:
+            return 0
+
+        # Delete chunks from ChromaDB
+        vector_store.delete(ids=ids_to_delete)
+
+        return len(ids_to_delete)
+
+    except Exception as e:
+        print("Error deleting from Vector DB:", e)
+        raise e
