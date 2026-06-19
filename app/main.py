@@ -24,6 +24,40 @@ app = FastAPI(
 def root():
     return {"message": "API started"}
 
+@app.get("/documents")
+def get_all_documents(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+
+    #  Permission Check 
+
+    allowed = False
+
+    for role in current_user.roles:
+        for permission in role.permissions:
+            if permission.name == "view_document":
+                allowed = True
+                break
+
+    if not allowed:
+        raise HTTPException(status_code=403,detail="You don't have permission to view documents" )
+
+    documents = db.query(Document).all()
+    print(documents)
+
+    return {
+        "total_documents": len(documents),
+        "documents": [
+            {
+                "id": doc.id,
+                "filename": doc.filename,
+                "uploaded_by": doc.uploaded_by
+            }
+            for doc in documents
+        ]
+    }
+
 @app.post("/roles")
 def create_role(
     role: RoleCreate,
