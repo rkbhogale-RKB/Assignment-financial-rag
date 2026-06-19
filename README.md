@@ -25,4 +25,9 @@ we have used an sample
 ![alt text](image-1.png)
 
 
+Performing any operations like view,add, delete will require permissions like add_documents, view_documents, delete_documents 
+Admins role get all permissions.
+Role are assigned to user thier are different roles like admins, clients, auditor etc..
+
+we have get all documents api and also get document particular document to view its information.
 
