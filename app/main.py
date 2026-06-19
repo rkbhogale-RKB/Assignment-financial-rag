@@ -58,6 +58,34 @@ def get_all_documents(
         ]
     }
 
+@app.get("/documents/{document_id}")
+def get_document(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+
+    allowed = False
+    for role in current_user.roles:
+        for permission in role.permissions:
+            if permission.name == "view_document":
+                allowed = True
+                break
+
+    if not allowed:
+        raise HTTPException(status_code=403,detail="You don't have permission to view documents")
+
+    document = db.query(Document).filter(Document.id == document_id).first()
+
+    if not document:
+        raise HTTPException(status_code=404,detail="Document not found" )
+
+    return {
+        "id": document.id,
+        "filename": document.filename,
+        "uploaded_by": document.uploaded_by
+    }
+
 @app.post("/roles")
 def create_role(
     role: RoleCreate,
